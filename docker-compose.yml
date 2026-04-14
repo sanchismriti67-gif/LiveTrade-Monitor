@@ -1,0 +1,100 @@
+services:
+  couchdb:
+    image: couchdb:3.3
+    environment:
+      COUCHDB_USER: admin
+      COUCHDB_PASSWORD: password
+    ports:
+      - "5984:5984"
+    volumes:
+      - couchdb_data:/opt/couchdb/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5984/_up"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  worker:
+    build: .
+    command: python worker.py
+    environment:
+      - COUCHDB_URL=http://admin:password@couchdb:5984/
+      # Full redis:// URL format — matches what Railway injects AND what
+      # the fixed worker.py expects (redis.Redis.from_url).
+      # The old bare "redis" hostname caused silent failures on Railway.
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      couchdb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web1:
+    build: .
+    # Use gunicorn, not python app.py — same as production Railway deployment
+    command: gunicorn --bind 0.0.0.0:5000 --timeout 120 --workers 1 --log-level info app:app
+    ports:
+      - "5001:5000"
+    environment:
+      - COUCHDB_URL=http://admin:password@couchdb:5984/
+      - REDIS_URL=redis://redis:6379
+      - PORT=5000
+    depends_on:
+      couchdb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web2:
+    build: .
+    command: gunicorn --bind 0.0.0.0:5000 --timeout 120 --workers 1 --log-level info app:app
+    ports:
+      - "5002:5000"
+    environment:
+      - COUCHDB_URL=http://admin:password@couchdb:5984/
+      - REDIS_URL=redis://redis:6379
+      - PORT=5000
+    depends_on:
+      couchdb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web3:
+    build: .
+    command: gunicorn --bind 0.0.0.0:5000 --timeout 120 --workers 1 --log-level info app:app
+    ports:
+      - "5003:5000"
+    environment:
+      - COUCHDB_URL=http://admin:password@couchdb:5984/
+      - REDIS_URL=redis://redis:6379
+      - PORT=5000
+    depends_on:
+      couchdb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - web1
+      - web2
+      - web3
+
+volumes:
+  couchdb_data:

@@ -1,0 +1,33 @@
+# render.yaml
+services:
+  # Your existing web service
+  - type: web
+    name: LiveTrade-Monitor
+    env: docker
+    repo: https://github.com/VishnuAravind-RG/LiveTrade-Monitor
+    branch: main
+    healthCheckPath: /api/health
+    envVars:
+      - key: COUCHDB_URL
+        value: http://admin:password@couchdb:5984/
+      - key: COUCHDB_USER
+        value: admin
+      - key: COUCHDB_PASSWORD
+        value: password
+
+  # New CouchDB service
+  - type: pserv
+    name: couchdb
+    env: docker
+    repo: https://github.com/VishnuAravind-RG/LiveTrade-Monitor
+    branch: main
+    dockerfilePath: ./Dockerfile.couchdb
+    disk:
+      name: couchdb-data
+      mountPath: /opt/couchdb/data
+      sizeGB: 1
+    envVars:
+      - key: COUCHDB_USER
+        value: admin
+      - key: COUCHDB_PASSWORD
+        value: password
