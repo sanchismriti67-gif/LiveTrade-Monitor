@@ -15,5 +15,3 @@ RUN pip install --upgrade pip && \
 COPY . .
 
 EXPOSE 8080
-
-CMD ["sh", "-c", "exec gunicorn --bind 0.0.0.0:${PORT:-8080} --timeout 120 --workers 1 --log-level info app:app"]
